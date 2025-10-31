@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Dual Timer Overlay</title>
+<style>
+  body {
+    margin:0; 
+    background:#000;   /* black background */
+    display:flex; 
+    align-items:center; 
+    justify-content:center;
+    gap:120px; 
+    height:100vh;
+    font-family: Impact, Arial, sans-serif; 
+    color:#fff;
+  }
+  .timer {
+    font-size:100px; 
+    text-shadow:0 0 15px rgba(255,0,0,0.8);
+    min-width: 320px; 
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+  <div id="timeA" class="timer">00:00:00</div>
+  <div id="timeB" class="timer">00:00:00</div>
+
+<script>
+  // timer state
+  let timers = {
+    A: { end:null, running:false },
+    B: { end:null, running:false }
+  };
+
+  // format HH:MM:SS
+  function fmt(ms){
+    if(ms<=0) return "00:00:00";
+    let s=Math.floor(ms/1000);
+    let h=Math.floor(s/3600);
+    let m=Math.floor((s%3600)/60);
+    s=s%60;
+    return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
+  }
+
+  // tick loop
+  function tick(){
+    for(const id of ["A","B"]){
+      const t = timers[id];
+      let el=document.getElementById("time"+id);
+      if(t.running && t.end){
+        let rem = t.end - Date.now();
+        if(rem<=0){ rem=0; t.running=false; }
+        el.textContent = fmt(rem);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // core functions
+  function startTimer(id, seconds=0){
+    const t = timers[id];
+    if(!t.running){
+      if(seconds>0){
+        t.end = Date.now() + seconds*1000;
+      } else if(!t.end){
+        t.end = Date.now();
+      }
+      t.running=true;
+    }
+  }
+// core functions
+function startTimer(id, seconds=0){
+  const t = timers[id];
+  if(!t.running){
+    if(seconds>0){
+      t.end = Date.now() + seconds*1000;
+    } else if(!t.end){
+      t.end = Date.now();
+    }
+    t.running=true;
+  }
+}
+
+function stopTimer(id){
+  const t = timers[id];
+  t.running = false;
+  t.end = null;
+  document.getElementById("time"+id).textContent = "00:00:00";
+}
+
+function addTime(id, sec){
+  const t = timers[id];
+  if(!t.end) t.end = Date.now();
+  t.end += sec*1000;
+  t.running = true;
+}
+
+  // Hotkeys: Numpad
+  document.addEventListener("keydown",(e)=>{
+    switch(e.code){
+      // Timer A (Expert Mode)
+      case "Numpad4": startTimer("A"); break;
+      case "Numpad5": stopTimer("A"); break;
+      case "Numpad6": addTime("A",1800); break; // +30m
+      // Timer B (Super Tanks)
+      case "Numpad1": startTimer("B"); break;
+      case "Numpad2": stopTimer("B"); break;
+      case "Numpad3": addTime("B",1800); break; // +30m
+    }
+  });
+
+  // WebSocket: TikFinity relay
+  const socket = new WebSocket("ws://localhost:8080"); // adjust if different
+
+  socket.onopen = ()=>console.log("Connected to TikFinity");
+  socket.onmessage = (event)=>{
+    const data = JSON.parse(event.data);
+    if(data.type==="gift"){
+      // Using your mapping
+      if(data.name==="Birthday Cake") addTime("A", 1800);     // 30m Expert
+      if(data.name==="Galaxy")        addTime("A", 14400);    // 4h Expert
+      if(data.name==="TikTok Crown")  addTime("B", 1800);     // 30m Super
+      if(data.name==="Umbrella of Love") addTime("B", 14400); // 4h Super
+    }
+  };
+</script>
+</body>
+</html>
