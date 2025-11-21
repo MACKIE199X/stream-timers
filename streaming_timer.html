@@ -38,9 +38,9 @@
 <script>
   // ===== TIMER STATE =====
   let timers = {
-    A: { end:null, running:false, pausedRemaining:0 },
-    B: { end:null, running:false, pausedRemaining:0 },
-    C: { end:null, running:false, pausedRemaining:0 }
+    A: { end:null, running:false, pausedRemaining:0, manuallyPaused:false },
+    B: { end:null, running:false, pausedRemaining:0, manuallyPaused:false },
+    C: { end:null, running:false, pausedRemaining:0, manuallyPaused:false }
   };
 
   // Load saved timers from localStorage
@@ -50,7 +50,6 @@
     for(const id of ["A","B","C"]){
       if(parsed[id]){
         timers[id] = parsed[id];
-        // Adjust end time if still running
         if(timers[id].running && timers[id].end){
           timers[id].end = Date.now() + timers[id].pausedRemaining;
         }
@@ -80,26 +79,39 @@
           t.running = false;
         }
         el.textContent = fmt(rem);
-        t.pausedRemaining = rem; // save remaining for pause/resume
+        t.pausedRemaining = rem;
+      } else if(!t.running && t.pausedRemaining){
+        el.textContent = fmt(t.pausedRemaining);
       }
     }
     setTimeout(tick, 200);
   }
   tick();
 
-  function startTimer(id, seconds=0){
+  // ===== TOGGLE START/PAUSE =====
+  function toggleTimer(id, seconds=0){
     const t = timers[id];
-    if(!t.running){
+    const now = Date.now();
+
+    if(t.running){
+      // Pause the timer
+      t.pausedRemaining = t.end - now;
+      t.running = false;
+      t.manuallyPaused = true;
+    } else {
+      // Start/resume the timer
       if(seconds > 0){
-        t.end = Date.now() + seconds * 1000;
+        t.end = now + seconds * 1000;
+        t.pausedRemaining = seconds * 1000;
       } else if(t.pausedRemaining && t.pausedRemaining > 0){
-        t.end = Date.now() + t.pausedRemaining;
+        t.end = now + t.pausedRemaining;
       } else if(!t.end){
-        t.end = Date.now();
+        t.end = now;
       }
       t.running = true;
-      saveTimers();
+      t.manuallyPaused = false;
     }
+    saveTimers();
   }
 
   function stopTimer(id){
@@ -107,6 +119,7 @@
     t.running = false;
     t.end = null;
     t.pausedRemaining = 0;
+    t.manuallyPaused = false;
     document.getElementById("time"+id).textContent = "00:00:00";
     saveTimers();
   }
@@ -116,21 +129,22 @@
     if(!t.end) t.end = Date.now();
     t.end += sec * 1000;
     t.running = true;
+    t.manuallyPaused = false;
     saveTimers();
   }
 
   // NUMPAD CONTROLS
   document.addEventListener("keydown",(e)=>{
     switch(e.code){
-      case "Numpad7": startTimer("A"); break;
+      case "Numpad7": toggleTimer("A"); break;
       case "Numpad8": stopTimer("A"); break;
       case "Numpad9": addTime("A", 1800); break;
 
-      case "Numpad4": startTimer("B"); break;
+      case "Numpad4": toggleTimer("B"); break;
       case "Numpad5": stopTimer("B"); break;
       case "Numpad6": addTime("B", 1800); break;
 
-      case "Numpad1": startTimer("C"); break;
+      case "Numpad1": toggleTimer("C"); break;
       case "Numpad2": stopTimer("C"); break;
       case "Numpad3": addTime("C", 1800); break;
     }
@@ -141,39 +155,23 @@
     localStorage.setItem("timers", JSON.stringify(timers));
   }
 
-  // Auto-pause when tab hidden, auto-resume when visible
+  // Auto-pause when tab hidden, auto-resume when visible (only if not manually paused)
   document.addEventListener("visibilitychange", ()=>{
     for(const id of ["A","B","C"]){
       const t = timers[id];
+      const now = Date.now();
+
       if(document.hidden && t.running){
-        // pause
-        t.pausedRemaining = t.end - Date.now();
+        t.pausedRemaining = t.end - now;
         t.running = false;
-        saveTimers();
-      } else if(!document.hidden && t.pausedRemaining > 0){
-        // resume
+      } else if(!document.hidden && !t.running && !t.manuallyPaused && t.pausedRemaining > 0){
         t.end = Date.now() + t.pausedRemaining;
         t.running = true;
-        saveTimers();
       }
     }
+    saveTimers();
   });
 
-  // ===== TikFinity socket (optional) =====
-  /*
-  const socket = new WebSocket("ws://localhost:8080");
-  socket.onopen = () => console.log("Connected to TikFinity");
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if(data.type === "gift"){
-      if(data.name === "Birthday Cake") addTime("A", 1800);
-      if(data.name === "Galaxy") addTime("A", 14400);
-
-      if(data.name === "TikTok Crown") addTime("B", 1800);
-      if(data.name === "Umbrella of Love") addTime("B", 14400);
-    }
-  };
-  */
 </script>
 
 </body>
