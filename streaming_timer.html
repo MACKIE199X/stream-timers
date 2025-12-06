@@ -38,9 +38,9 @@
 <script>
   // ===== TIMER STATE =====
   let timers = {
-    A: { end:null, running:false, pausedRemaining:0, manuallyPaused:false },
-    B: { end:null, running:false, pausedRemaining:0, manuallyPaused:false },
-    C: { end:null, running:false, pausedRemaining:0, manuallyPaused:false }
+    A: { end:null, running:false, pausedRemaining:0 },
+    B: { end:null, running:false, pausedRemaining:0 },
+    C: { end:null, running:false, pausedRemaining:0 }
   };
 
   // Load saved timers from localStorage
@@ -50,7 +50,9 @@
     for(const id of ["A","B","C"]){
       if(parsed[id]){
         timers[id] = parsed[id];
-        if(timers[id].running && timers[id].end){
+
+        // Resume timer based on real time
+        if(timers[id].running && timers[id].pausedRemaining){
           timers[id].end = Date.now() + timers[id].pausedRemaining;
         }
       }
@@ -80,36 +82,34 @@
         }
         el.textContent = fmt(rem);
         t.pausedRemaining = rem;
-      } else if(!t.running && t.pausedRemaining){
+      } else {
         el.textContent = fmt(t.pausedRemaining);
       }
     }
-    setTimeout(tick, 200);
+
+    // KEEP RUNNING, EVEN WHEN TAB CHANGES / BACKGROUND / INACTIVE
+    requestAnimationFrame(tick);
   }
   tick();
 
-  // ===== TOGGLE START/PAUSE =====
+  // ===== CONTROLS =====
   function toggleTimer(id, seconds=0){
     const t = timers[id];
     const now = Date.now();
 
     if(t.running){
-      // Pause the timer
       t.pausedRemaining = t.end - now;
       t.running = false;
-      t.manuallyPaused = true;
     } else {
-      // Start/resume the timer
       if(seconds > 0){
         t.end = now + seconds * 1000;
         t.pausedRemaining = seconds * 1000;
-      } else if(t.pausedRemaining && t.pausedRemaining > 0){
+      } else if(t.pausedRemaining > 0){
         t.end = now + t.pausedRemaining;
       } else if(!t.end){
         t.end = now;
       }
       t.running = true;
-      t.manuallyPaused = false;
     }
     saveTimers();
   }
@@ -119,7 +119,6 @@
     t.running = false;
     t.end = null;
     t.pausedRemaining = 0;
-    t.manuallyPaused = false;
     document.getElementById("time"+id).textContent = "00:00:00";
     saveTimers();
   }
@@ -129,7 +128,6 @@
     if(!t.end) t.end = Date.now();
     t.end += sec * 1000;
     t.running = true;
-    t.manuallyPaused = false;
     saveTimers();
   }
 
@@ -150,23 +148,16 @@
     }
   });
 
-  // SAVE TO LOCALSTORAGE
   function saveTimers(){
     localStorage.setItem("timers", JSON.stringify(timers));
   }
 
-  // Auto-pause when tab hidden, auto-resume when visible (only if not manually paused)
-  document.addEventListener("visibilitychange", ()=>{
+  // ===== SAVE ON CLOSE / REFRESH ONLY =====
+  window.addEventListener("beforeunload", ()=>{
     for(const id of ["A","B","C"]){
       const t = timers[id];
-      const now = Date.now();
-
-      if(document.hidden && t.running){
-        t.pausedRemaining = t.end - now;
-        t.running = false;
-      } else if(!document.hidden && !t.running && !t.manuallyPaused && t.pausedRemaining > 0){
-        t.end = Date.now() + t.pausedRemaining;
-        t.running = true;
+      if(t.running && t.end){
+        t.pausedRemaining = t.end - Date.now();
       }
     }
     saveTimers();
