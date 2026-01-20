@@ -1,3 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Quad Timer Overlay</title>
+
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    height: 100vh;
+    font-family: Impact, Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  .timer {
+    position: fixed;
+    font-size: 90px;
+    text-shadow: 0 0 15px rgba(255,0,0,0.8);
+    width: 100%;
+    text-align: center;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  #timeA { top: 15%; }
+  #timeB { top: 35%; }
+  #timeD { top: 55%; }
+  #timeC { top: 75%; }
+</style>
+</head>
+<body>
+
+  <div id="timeA" class="timer">00:00:00</div>
+  <div id="timeB" class="timer">00:00:00</div>
+  <div id="timeD" class="timer">00:00:00</div>
+  <div id="timeC" class="timer">00:00:00</div>
+
 <script>
   // ===== TIMER STATE =====
   let timers = {
@@ -22,17 +61,16 @@
   }
 
   function fmt(ms){
-    if(ms <= 0) return "00:00:00";
-    let s = Math.floor(ms / 1000);
-    let h = Math.floor(s / 3600);
-    let m = Math.floor((s % 3600) / 60);
-    s = s % 60;
+    if(ms<=0) return "00:00:00";
+    let s=Math.floor(ms/1000);
+    let h=Math.floor(s/3600);
+    let m=Math.floor((s%3600)/60);
+    s=s%60;
     return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
   }
 
   function tick(){
     const now = Date.now();
-
     for(const id of ["A","B","C","D"]){
       const t = timers[id];
       const el = document.getElementById("time"+id);
@@ -43,16 +81,15 @@
           rem = 0;
           t.running = false;
         }
-        t.pausedRemaining = rem;
         el.textContent = fmt(rem);
+        t.pausedRemaining = rem;
       } else {
         el.textContent = fmt(t.pausedRemaining);
       }
     }
+    requestAnimationFrame(tick);
   }
-
-  // ✅ RUNS EVEN WHEN TAB IS NOT FOCUSED
-  setInterval(tick, 250);
+  tick();
 
   // ===== CONTROLS =====
   function toggleTimer(id, seconds=0){
@@ -64,8 +101,8 @@
       t.running = false;
     } else {
       if(seconds > 0){
+        t.end = now + seconds * 1000;
         t.pausedRemaining = seconds * 1000;
-        t.end = now + t.pausedRemaining;
       } else if(t.pausedRemaining > 0){
         t.end = now + t.pausedRemaining;
       } else {
@@ -87,9 +124,7 @@
 
   function addTime(id, sec){
     const t = timers[id];
-    if(!t.running && !t.end){
-      t.end = Date.now();
-    }
+    if(!t.end) t.end = Date.now();
     t.end += sec * 1000;
     t.running = true;
     saveTimers();
@@ -98,21 +133,25 @@
   // ===== NUMPAD CONTROLS =====
   document.addEventListener("keydown",(e)=>{
     switch(e.code){
+      // Timer A
       case "Numpad7": toggleTimer("A"); break;
       case "Numpad8": stopTimer("A"); break;
-      case "Numpad9": addTime("A",1800); break;
+      case "Numpad9": addTime("A", 1800); break;
 
+      // Timer B
       case "Numpad4": toggleTimer("B"); break;
       case "Numpad5": stopTimer("B"); break;
-      case "Numpad6": addTime("B",1800); break;
+      case "Numpad6": addTime("B", 1800); break;
 
+      // Timer C
       case "Numpad1": toggleTimer("C"); break;
       case "Numpad2": stopTimer("C"); break;
-      case "Numpad3": addTime("C",1800); break;
+      case "Numpad3": addTime("C", 1800); break;
 
+      // Timer D (* - +)
       case "NumpadMultiply": toggleTimer("D"); break;
       case "NumpadSubtract": stopTimer("D"); break;
-      case "NumpadAdd": addTime("D",1800); break;
+      case "NumpadAdd": addTime("D", 1800); break;
     }
   });
 
@@ -130,3 +169,6 @@
     saveTimers();
   });
 </script>
+
+</body>
+</html>
