@@ -5,66 +5,63 @@
 <title>Quad Timer Overlay</title>
 
 <style>
+/* ===== CUSTOM FONT (GITHUB SAFE) ===== */
 @font-face {
-  font-family: '28DaysLater';
-  src: url('./28%20Days%20Later.ttf') format('truetype');
+  font-family: 'DaysLater';
+  src: url('28%20Days%20Later.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
 }
 
-  body {
-    margin: 0;
-    background: transparent;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-  }
+/* ===== FULLY TRANSPARENT BACKGROUND ===== */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  overflow: hidden;
+}
 
-  /* MAIN WRAPPER */
-  .container {
-    display: flex;
-    gap: 15px;
-    margin-top: 10px;
-  }
+/* ===== HORIZONTAL CONTAINER ===== */
+.container {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10px;
+}
 
-  /* TIMER BOX */
-  .timerBox {
-    background: #000;
-    padding: 8px 18px;
-    border: 3px solid #ff0000;
-    box-shadow: 
-      0 0 8px #ff0000,
-      inset 0 0 8px rgba(255,0,0,0.6);
-    text-align: center;
-    min-width: 230px;
-  }
+/* ===== TIMER BOX ===== */
+.timerBox {
+  text-align: center;
+}
 
-  /* TITLE - 28 DAYS LATER FONT */
-  .title {
-    font-family: '28DaysLater', Impact, sans-serif;
-    font-size: 22px;
-    color: #ff2a2a;
-    letter-spacing: 2px;
-    margin-bottom: 3px;
-    text-shadow:
-      -2px -2px 0 #000,
-      2px -2px 0 #000,
-      -2px 2px 0 #000,
-      2px 2px 0 #000,
-      0 0 10px #ff0000;
-  }
+/* ===== TITLE (28 DAYS LATER FONT) ===== */
+.title {
+  font-family: 'DaysLater', Impact, sans-serif;
+  font-size: 22px;
+  color: #ff1a1a;
+  letter-spacing: 2px;
+  margin-bottom: 3px;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0 0 12px #ff0000;
+}
 
-  /* TIMER NUMBERS - OLD STYLE */
-  .time {
-    font-family: Impact, Arial Black, sans-serif;
-    font-size: 48px;
-    color: #ffffff;
-    text-shadow:
-      -3px -3px 0 #000,
-      3px -3px 0 #000,
-      -3px 3px 0 #000,
-      3px 3px 0 #000,
-      0 0 15px #ff0000;
-  }
+/* ===== TIMER NUMBERS (OLD FONT STYLE) ===== */
+.time {
+  font-family: Impact, Arial Black, sans-serif;
+  font-size: 48px;
+  color: #ffffff;
+  text-shadow:
+    -3px -3px 0 #000,
+    3px -3px 0 #000,
+    -3px 3px 0 #000,
+    3px 3px 0 #000,
+    0 0 18px #ff0000;
+}
 </style>
 </head>
 <body>
@@ -94,118 +91,98 @@
 </div>
 
 <script>
-  let timers = {
-    A: { end:null, running:false, pausedRemaining:0 },
-    B: { end:null, running:false, pausedRemaining:0 },
-    C: { end:null, running:false, pausedRemaining:0 },
-    D: { end:null, running:false, pausedRemaining:0 }
-  };
+let timers = {
+  A: { end:null, running:false, pausedRemaining:0 },
+  B: { end:null, running:false, pausedRemaining:0 },
+  C: { end:null, running:false, pausedRemaining:0 },
+  D: { end:null, running:false, pausedRemaining:0 }
+};
 
-  const saved = localStorage.getItem("timers");
-  if(saved){
-    const parsed = JSON.parse(saved);
-    for(const id of ["A","B","C","D"]){
-      if(parsed[id]){
-        timers[id] = parsed[id];
-        if(timers[id].running && timers[id].pausedRemaining){
-          timers[id].end = Date.now() + timers[id].pausedRemaining;
-        }
-      }
-    }
-  }
+function fmt(ms){
+  if(ms<=0) return "00:00:00";
+  let s=Math.floor(ms/1000);
+  let h=Math.floor(s/3600);
+  let m=Math.floor((s%3600)/60);
+  s=s%60;
+  return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
+}
 
-  function fmt(ms){
-    if(ms<=0) return "00:00:00";
-    let s=Math.floor(ms/1000);
-    let h=Math.floor(s/3600);
-    let m=Math.floor((s%3600)/60);
-    s=s%60;
-    return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
-  }
-
-  function tick(){
-    const now = Date.now();
-    for(const id of ["A","B","C","D"]){
-      const t = timers[id];
-      const el = document.getElementById("time"+id);
-
-      if(t.running && t.end){
-        let rem = t.end - now;
-        if(rem <= 0){
-          rem = 0;
-          t.running = false;
-        }
-        el.textContent = fmt(rem);
-        t.pausedRemaining = rem;
-      } else {
-        el.textContent = fmt(t.pausedRemaining);
-      }
-    }
-    requestAnimationFrame(tick);
-  }
-  tick();
-
-  function toggleTimer(id, seconds=0){
+function tick(){
+  const now = Date.now();
+  for(const id of ["A","B","C","D"]){
     const t = timers[id];
-    const now = Date.now();
+    const el = document.getElementById("time"+id);
 
-    if(t.running){
-      t.pausedRemaining = t.end - now;
-      t.running = false;
+    if(t.running && t.end){
+      let rem = t.end - now;
+      if(rem <= 0){
+        rem = 0;
+        t.running = false;
+      }
+      el.textContent = fmt(rem);
+      t.pausedRemaining = rem;
     } else {
-      if(seconds > 0){
-        t.end = now + seconds * 1000;
-        t.pausedRemaining = seconds * 1000;
-      } else if(t.pausedRemaining > 0){
-        t.end = now + t.pausedRemaining;
-      } else {
-        t.end = now;
-      }
-      t.running = true;
+      el.textContent = fmt(t.pausedRemaining);
     }
-    saveTimers();
   }
+  requestAnimationFrame(tick);
+}
+tick();
 
-  function stopTimer(id){
-    const t = timers[id];
+function toggleTimer(id, seconds=0){
+  const t = timers[id];
+  const now = Date.now();
+
+  if(t.running){
+    t.pausedRemaining = t.end - now;
     t.running = false;
-    t.end = null;
-    t.pausedRemaining = 0;
-    document.getElementById("time"+id).textContent = "00:00:00";
-    saveTimers();
-  }
-
-  function addTime(id, sec){
-    const t = timers[id];
-    if(!t.end) t.end = Date.now();
-    t.end += sec * 1000;
-    t.running = true;
-    saveTimers();
-  }
-
-  document.addEventListener("keydown",(e)=>{
-    switch(e.code){
-      case "Numpad7": toggleTimer("A"); break;
-      case "Numpad8": stopTimer("A"); break;
-      case "Numpad9": addTime("A", 1800); break;
-
-      case "Numpad4": toggleTimer("B"); break;
-      case "Numpad5": stopTimer("B"); break;
-      case "Numpad6": addTime("B", 1800); break;
-
-      case "Numpad1": toggleTimer("C"); break;
-      case "Numpad2": stopTimer("C"); break;
-      case "Numpad3": addTime("C", 1800); break;
-
-      case "NumpadMultiply": toggleTimer("D"); break;
-      case "NumpadSubtract": stopTimer("D"); break;
-      case "NumpadAdd": addTime("D", 1800); break;
+  } else {
+    if(seconds > 0){
+      t.end = now + seconds * 1000;
+      t.pausedRemaining = seconds * 1000;
+    } else if(t.pausedRemaining > 0){
+      t.end = now + t.pausedRemaining;
+    } else {
+      t.end = now;
     }
-  });
-
-  function saveTimers(){
-    localStorage.setItem("timers", JSON.stringify(timers));
+    t.running = true;
   }
+}
+
+function stopTimer(id){
+  const t = timers[id];
+  t.running = false;
+  t.end = null;
+  t.pausedRemaining = 0;
+  document.getElementById("time"+id).textContent = "00:00:00";
+}
+
+function addTime(id, sec){
+  const t = timers[id];
+  if(!t.end) t.end = Date.now();
+  t.end += sec * 1000;
+  t.running = true;
+}
+
+document.addEventListener("keydown",(e)=>{
+  switch(e.code){
+    case "Numpad7": toggleTimer("A"); break;
+    case "Numpad8": stopTimer("A"); break;
+    case "Numpad9": addTime("A", 1800); break;
+
+    case "Numpad4": toggleTimer("B"); break;
+    case "Numpad5": stopTimer("B"); break;
+    case "Numpad6": addTime("B", 1800); break;
+
+    case "Numpad1": toggleTimer("C"); break;
+    case "Numpad2": stopTimer("C"); break;
+    case "Numpad3": addTime("C", 1800); break;
+
+    case "NumpadMultiply": toggleTimer("D"); break;
+    case "NumpadSubtract": stopTimer("D"); break;
+    case "NumpadAdd": addTime("D", 1800); break;
+  }
+});
 </script>
 
 </body>
