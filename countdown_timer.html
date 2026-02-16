@@ -5,7 +5,7 @@
 <title>Quad Timer Overlay</title>
 
 <style>
-/* ===== CUSTOM FONT (GITHUB SAFE) ===== */
+/* ===== LOAD 28 DAYS LATER FONT (GITHUB SAFE) ===== */
 @font-face {
   font-family: 'DaysLater';
   src: url('28%20Days%20Later.ttf') format('truetype');
@@ -13,7 +13,7 @@
   font-style: normal;
 }
 
-/* ===== FULLY TRANSPARENT BACKGROUND ===== */
+/* ===== FULL TRANSPARENT BACKGROUND ===== */
 html, body {
   margin: 0;
   padding: 0;
@@ -21,46 +21,37 @@ html, body {
   overflow: hidden;
 }
 
-/* ===== HORIZONTAL CONTAINER ===== */
+/* ===== HORIZONTAL LAYOUT ===== */
 .container {
   display: flex;
-  gap: 18px;
+  gap: 20px;
   justify-content: center;
   align-items: flex-start;
   padding-top: 10px;
 }
 
-/* ===== TIMER BOX ===== */
 .timerBox {
   text-align: center;
 }
 
-/* ===== TITLE (28 DAYS LATER FONT) ===== */
+/* ===== TITLE STYLE ===== */
 .title {
-  font-family: 'DaysLater', Impact, sans-serif;
-  font-size: 22px;
-  color: #ff1a1a;
+  font-family: 'DaysLater', sans-serif;
+  font-size: 24px;
+  color: #ffffff;
+  -webkit-text-stroke: 2px #ff0000;
+  text-shadow: 0 0 10px rgba(255,0,0,0.7);
+  margin-bottom: 4px;
   letter-spacing: 2px;
-  margin-bottom: 3px;
-  text-shadow:
-    -2px -2px 0 #000,
-    2px -2px 0 #000,
-    -2px 2px 0 #000,
-    2px 2px 0 #000,
-    0 0 12px #ff0000;
 }
 
-/* ===== TIMER NUMBERS (OLD FONT STYLE) ===== */
+/* ===== TIMER NUMBERS STYLE ===== */
 .time {
-  font-family: Impact, Arial Black, sans-serif;
-  font-size: 48px;
+  font-family: 'DaysLater', sans-serif;
+  font-size: 52px;
   color: #ffffff;
-  text-shadow:
-    -3px -3px 0 #000,
-    3px -3px 0 #000,
-    -3px 3px 0 #000,
-    3px 3px 0 #000,
-    0 0 18px #ff0000;
+  -webkit-text-stroke: 3px #ff0000;
+  text-shadow: 0 0 15px rgba(255,0,0,0.8);
 }
 </style>
 </head>
