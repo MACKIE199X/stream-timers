@@ -93,131 +93,128 @@ html, body {
 </div>
 
 <script>
-// ===== TIMER STATE =====
-let timers = {
-  A: { end:null, running:false, pausedRemaining:0 },
-  B: { end:null, running:false, pausedRemaining:0 },
-  C: { end:null, running:false, pausedRemaining:0 },
-  D: { end:null, running:false, pausedRemaining:0 }
-};
+  let timers = {
+    A: { end:null, running:false, pausedRemaining:0 },
+    B: { end:null, running:false, pausedRemaining:0 },
+    C: { end:null, running:false, pausedRemaining:0 },
+    D: { end:null, running:false, pausedRemaining:0 }
+  };
 
-// Load saved timers
-const saved = localStorage.getItem("timers");
-if(saved){
-  const parsed = JSON.parse(saved);
-  for(const id of ["A","B","C","D"]){
-    if(parsed[id]){
-      timers[id] = parsed[id];
-      if(timers[id].running && timers[id].pausedRemaining){
-        timers[id].end = Date.now() + timers[id].pausedRemaining;
+  const saved = localStorage.getItem("timers");
+  if(saved){
+    const parsed = JSON.parse(saved);
+    for(const id of ["A","B","C","D"]){
+      if(parsed[id]){
+        timers[id] = parsed[id];
+        if(timers[id].running && timers[id].pausedRemaining){
+          timers[id].end = Date.now() + timers[id].pausedRemaining;
+        }
       }
     }
   }
-}
 
-function fmt(ms){
-  if(ms<=0) return "00:00:00";
-  let s=Math.floor(ms/1000);
-  let h=Math.floor(s/3600);
-  let m=Math.floor((s%3600)/60);
-  s=s%60;
-  return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
-}
+  function fmt(ms){
+    if(ms<=0) return "00:00:00";
+    let s=Math.floor(ms/1000);
+    let h=Math.floor(s/3600);
+    let m=Math.floor((s%3600)/60);
+    s=s%60;
+    return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
+  }
 
-function tick(){
-  const now = Date.now();
-  for(const id of ["A","B","C","D"]){
+  function tick(){
+    const now = Date.now();
+    for(const id of ["A","B","C","D"]){
+      const t = timers[id];
+      const el = document.getElementById("time"+id);
+
+      if(t.running && t.end){
+        let rem = t.end - now;
+        if(rem <= 0){
+          rem = 0;
+          t.running = false;
+        }
+        el.textContent = fmt(rem);
+        t.pausedRemaining = rem;
+      } else {
+        el.textContent = fmt(t.pausedRemaining);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  function toggleTimer(id, seconds=0){
     const t = timers[id];
-    const el = document.getElementById("time"+id);
-    if(t.running && t.end){
-      let rem = t.end - now;
-      if(rem <= 0){
-        rem = 0;
-        t.running = false;
-      }
-      el.textContent = fmt(rem);
-      t.pausedRemaining = rem;
+    const now = Date.now();
+
+    if(t.running){
+      t.pausedRemaining = t.end - now;
+      t.running = false;
     } else {
-      el.textContent = fmt(t.pausedRemaining);
+      if(seconds > 0){
+        t.end = now + seconds * 1000;
+        t.pausedRemaining = seconds * 1000;
+      } else if(t.pausedRemaining > 0){
+        t.end = now + t.pausedRemaining;
+      } else {
+        t.end = now;
+      }
+      t.running = true;
     }
+    saveTimers();
   }
-  requestAnimationFrame(tick);
-}
-tick();
 
-// ===== CONTROLS =====
-function toggleTimer(id, seconds=0){
-  const t = timers[id];
-  const now = Date.now();
-
-  if(t.running){
-    t.pausedRemaining = t.end - now;
+  function stopTimer(id){
+    const t = timers[id];
     t.running = false;
-  } else {
-    if(seconds > 0){
-      t.end = now + seconds * 1000;
-      t.pausedRemaining = seconds * 1000;
-    } else if(t.pausedRemaining > 0){
-      t.end = now + t.pausedRemaining;
-    } else {
-      t.end = now;
-    }
-    t.running = true;
+    t.end = null;
+    t.pausedRemaining = 0;
+    document.getElementById("time"+id).textContent = "00:00:00";
+    saveTimers();
   }
-  saveTimers();
-}
 
-function stopTimer(id){
-  const t = timers[id];
-  t.running = false;
-  t.end = null;
-  t.pausedRemaining = 0;
-  document.getElementById("time"+id).textContent = "00:00:00";
-  saveTimers();
-}
-
-function addTime(id, sec){
-  const t = timers[id];
-  if(!t.end) t.end = Date.now();
-  t.end += sec * 1000;
-  t.running = true;
-  saveTimers();
-}
-
-// ===== NUMPAD CONTROLS =====
-document.addEventListener("keydown",(e)=>{
-  switch(e.code){
-    case "Numpad7": toggleTimer("A"); break;
-    case "Numpad8": stopTimer("A"); break;
-    case "Numpad9": addTime("A", 1800); break;
-
-    case "Numpad4": toggleTimer("B"); break;
-    case "Numpad5": stopTimer("B"); break;
-    case "Numpad6": addTime("B", 1800); break;
-
-    case "Numpad1": toggleTimer("C"); break;
-    case "Numpad2": stopTimer("C"); break;
-    case "Numpad3": addTime("C", 1800); break;
-
-    case "NumpadMultiply": toggleTimer("D"); break;
-    case "NumpadSubtract": stopTimer("D"); break;
-    case "NumpadAdd": addTime("D", 1800); break;
-  }
-});
-
-function saveTimers(){
-  localStorage.setItem("timers", JSON.stringify(timers));
-}
-
-window.addEventListener("beforeunload", ()=>{
-  for(const id of ["A","B","C","D"]){
+  function addTime(id, sec){
     const t = timers[id];
-    if(t.running && t.end){
-      t.pausedRemaining = t.end - Date.now();
-    }
+    if(!t.end) t.end = Date.now();
+    t.end += sec * 1000;
+    t.running = true;
+    saveTimers();
   }
-  saveTimers();
-});
+
+  document.addEventListener("keydown",(e)=>{
+    switch(e.code){
+      case "Numpad7": toggleTimer("A"); break;
+      case "Numpad8": stopTimer("A"); break;
+      case "Numpad9": addTime("A", 1800); break;
+
+      case "Numpad4": toggleTimer("B"); break;
+      case "Numpad5": stopTimer("B"); break;
+      case "Numpad6": addTime("B", 1800); break;
+
+      case "Numpad1": toggleTimer("C"); break;
+      case "Numpad2": stopTimer("C"); break;
+      case "Numpad3": addTime("C", 1800); break;
+
+      case "NumpadMultiply": toggleTimer("D"); break;
+      case "NumpadSubtract": stopTimer("D"); break;
+      case "NumpadAdd": addTime("D", 1800); break;
+    }
+  });
+
+  function saveTimers(){
+    localStorage.setItem("timers", JSON.stringify(timers));
+  }
+
+  window.addEventListener("beforeunload", ()=>{
+    for(const id of ["A","B","C","D"]){
+      const t = timers[id];
+      if(t.running && t.end){
+        t.pausedRemaining = t.end - Date.now();
+      }
+    }
+    saveTimers();
+  });
 </script>
 
 </body>
