@@ -56,12 +56,14 @@ html, body {
 .time {
   font-family: 'DaysLater', sans-serif;
   font-size: 52px;
-  color: #ffffff; /* white fill */
+  color: #ffffff; 
   text-shadow: 
      -2px -2px 0 #ff0000,  
       2px -2px 0 #ff0000,
      -2px  2px 0 #ff0000,
-      2px  2px 0 #ff0000; /* red stroke effect */
+      2px  2px 0 #ff0000;
+  width: 180px;       /* <-- force fixed width */
+  display: inline-block; /* <-- needed to respect width */
 }
 </style>
 </head>
