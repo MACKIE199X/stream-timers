@@ -5,7 +5,7 @@
 <title>Quad Timer Overlay</title>
 
 <style>
-/* ===== LOAD 28 DAYS LATER FONT ===== */
+/* ===== LOAD 28 DAYS LATER FONT (GITHUB SAFE) ===== */
 @font-face {
   font-family: 'DaysLater';
   src: url('28%20Days%20Later.ttf') format('truetype');
@@ -33,18 +33,8 @@ html, body {
   align-items: flex-start;
 }
 
-/* ===== TIMER BOX WITH RED OUTLINE ===== */
 .timerBox {
   text-align: center;
-  border: 2px solid red;       /* red outline */
-  padding: 10px 20px;          /* inner spacing */
-  width: 200px;                /* fixed width */
-  height: 120px;               /* fixed height */
-  box-sizing: border-box;      /* include padding & border in size */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;     /* vertical center */
-  align-items: center;         /* horizontal center */
 }
 
 /* ===== TITLE STYLE ===== */
@@ -54,7 +44,7 @@ html, body {
   color: #ffffff;
   margin-bottom: 4px;
   letter-spacing: 2px;
-  white-space: nowrap; /* single line */
+  white-space: nowrap; /* <-- force single line */
   text-shadow: 
      -1px -1px 0 #ff0000,  
       1px -1px 0 #ff0000,
@@ -66,15 +56,14 @@ html, body {
 .time {
   font-family: 'DaysLater', sans-serif;
   font-size: 52px;
-  color: #ffffff;
+  color: #ffffff; 
   text-shadow: 
      -2px -2px 0 #ff0000,  
       2px -2px 0 #ff0000,
      -2px  2px 0 #ff0000,
       2px  2px 0 #ff0000;
-  width: 100%;       /* fill box width */
-  display: block;
-  text-align: center;
+  width: 180px;       /* <-- force fixed width */
+  display: inline-block; /* <-- needed to respect width */
 }
 </style>
 </head>
@@ -106,400 +95,128 @@ html, body {
 </div>
 
 <script>
-let timers = {
-  A: { end:null, running:false, pausedRemaining:0 },
-  B: { end:null, running:false, pausedRemaining:0 },
-  C: { end:null, running:false, pausedRemaining:0 },
-  D: { end:null, running:false, pausedRemaining:0 }
-};
+  let timers = {
+    A: { end:null, running:false, pausedRemaining:0 },
+    B: { end:null, running:false, pausedRemaining:0 },
+    C: { end:null, running:false, pausedRemaining:0 },
+    D: { end:null, running:false, pausedRemaining:0 }
+  };
 
-const saved = localStorage.getItem("timers");
-if(saved){
-  const parsed = JSON.parse(saved);
-  for(const id of ["A","B","C","D"]){
-    if(parsed[id]){
-      timers[id] = parsed[id];
-      if(timers[id].running && timers[id].pausedRemaining){
-        timers[id].end = Date.now() + timers[id].pausedRemaining;
+  const saved = localStorage.getItem("timers");
+  if(saved){
+    const parsed = JSON.parse(saved);
+    for(const id of ["A","B","C","D"]){
+      if(parsed[id]){
+        timers[id] = parsed[id];
+        if(timers[id].running && timers[id].pausedRemaining){
+          timers[id].end = Date.now() + timers[id].pausedRemaining;
+        }
       }
     }
   }
-}
 
-function fmt(ms){
-  if(ms<=0) return "00:00:00";
-  let s=Math.floor(ms/1000);
-  let h=Math.floor(s/3600);
-  let m=Math.floor((s%3600)/60);
-  s=s%60;
-  return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
-}
+  function fmt(ms){
+    if(ms<=0) return "00:00:00";
+    let s=Math.floor(ms/1000);
+    let h=Math.floor(s/3600);
+    let m=Math.floor((s%3600)/60);
+    s=s%60;
+    return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
+  }
 
-function tick(){
-  const now = Date.now();
-  for(const id of ["A","B","C","D"]){
+  function tick(){
+    const now = Date.now();
+    for(const id of ["A","B","C","D"]){
+      const t = timers[id];
+      const el = document.getElementById("time"+id);
+
+      if(t.running && t.end){
+        let rem = t.end - now;
+        if(rem <= 0){
+          rem = 0;
+          t.running = false;
+        }
+        el.textContent = fmt(rem);
+        t.pausedRemaining = rem;
+      } else {
+        el.textContent = fmt(t.pausedRemaining);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  function toggleTimer(id, seconds=0){
     const t = timers[id];
-    const el = document.getElementById("time"+id);
+    const now = Date.now();
 
-    if(t.running && t.end){
-      let rem = t.end - now;
-      if(rem <= 0){
-        rem = 0;
-        t.running = false;
-      }
-      el.textContent = fmt(rem);
-      t.pausedRemaining = rem;
+    if(t.running){
+      t.pausedRemaining = t.end - now;
+      t.running = false;
     } else {
-      el.textContent = fmt(t.pausedRemaining);
+      if(seconds > 0){
+        t.end = now + seconds * 1000;
+        t.pausedRemaining = seconds * 1000;
+      } else if(t.pausedRemaining > 0){
+        t.end = now + t.pausedRemaining;
+      } else {
+        t.end = now;
+      }
+      t.running = true;
     }
+    saveTimers();
   }
-  requestAnimationFrame(tick);
-}
-tick();
 
-function toggleTimer(id, seconds=0){
-  const t = timers[id];
-  const now = Date.now();
-
-  if(t.running){
-    t.pausedRemaining = t.end - now;
+  function stopTimer(id){
+    const t = timers[id];
     t.running = false;
-  } else {
-    if(seconds > 0){
-      t.end = now + seconds * 1000;
-      t.pausedRemaining = seconds * 1000;
-    } else if(t.pausedRemaining > 0){
-      t.end = now + t.pausedRemaining;
-    } else {
-      t.end = now;
-    }
-    t.running = true;
+    t.end = null;
+    t.pausedRemaining = 0;
+    document.getElementById("time"+id).textContent = "00:00:00";
+    saveTimers();
   }
-  saveTimers();
-}
 
-function stopTimer(id){
-  const t = timers[id];
-  t.running = false;
-  t.end = null;
-  t.pausedRemaining = 0;
-  document.getElementById("time"+id).textContent = "00:00:00";
-  saveTimers();
-}
-
-function addTime(id, sec){
-  const t = timers[id];
-  if(!t.end) t.end = Date.now();
-  t.end += sec * 1000;
-  t.running = true;
-  saveTimers();
-}
-
-document.addEventListener("keydown",(e)=>{
-  switch(e.code){
-    case "Numpad7": toggleTimer("A"); break;
-    case "Numpad8": stopTimer("A"); break;
-    case "Numpad9": addTime("A", 1800); break;
-
-    case "Numpad4": toggleTimer("B"); break;
-    case "Numpad5": stopTimer("B"); break;
-    case "Numpad6": addTime("B", 1800); break;
-
-    case "Numpad1": toggleTimer("C"); break;
-    case "Numpad2": stopTimer("C"); break;
-    case "Numpad3": addTime("C", 1800); break;
-
-    case "NumpadMultiply": toggleTimer("D"); break;
-    case "NumpadSubtract": stopTimer("D"); break;
-    case "NumpadAdd": addTime("D", 1800); break;
-  }
-});
-
-function saveTimers(){
-  localStorage.setItem("timers", JSON.stringify(timers));
-}
-
-window.addEventListener("beforeunload", ()=>{
-  for(const id of ["A","B","C","D"]){
+  function addTime(id, sec){
     const t = timers[id];
-    if(t.running && t.end){
-      t.pausedRemaining = t.end - Date.now();
-    }
+    if(!t.end) t.end = Date.now();
+    t.end += sec * 1000;
+    t.running = true;
+    saveTimers();
   }
-  saveTimers();
-});
-</script>
 
-</body>
-</html>
-✅ What’s fixed/added:
+  document.addEventListener("keydown",(e)=>{
+    switch(e.code){
+      case "Numpad7": toggleTimer("A"); break;
+      case "Numpad8": stopTimer("A"); break;
+      case "Numpad9": addTime("A", 1800); break;
 
-Timers won’t shift when numbers change.
+      case "Numpad4": toggleTimer("B"); break;
+      case "Numpad5": stopTimer("B"); break;
+      case "Numpad6": addTime("B", 1800); break;
 
-Each timer is inside a red-outlined box.
+      case "Numpad1": toggleTimer("C"); break;
+      case "Numpad2": stopTimer("C"); break;
+      case "Numpad3": addTime("C", 1800); break;
 
-All timer boxes are equal in size.
+      case "NumpadMultiply": toggleTimer("D"); break;
+      case "NumpadSubtract": stopTimer("D"); break;
+      case "NumpadAdd": addTime("D", 1800); break;
+    }
+  });
 
-Content is perfectly centered.
+  function saveTimers(){
+    localStorage.setItem("timers", JSON.stringify(timers));
+  }
 
-If you want, I can also add a semi-transparent black background inside the red box to make it look more like a game HUD overlay. It will really pop visually.
-
-Do you want me to do that?
-
-
-You said:
-FIX THIS IT IS NOT CENTERED IN KNOCKBAK TANKS AND ROCKETT JOCKEYS ALSO THE TEXT IS OVERFLOWING OUTSIDE FIX IT ALSO MAKE IT MORE LIKE THE TIMERS ARE INSIDE THE CONTAINER BOX
-
-ChatGPT said:
-Got it! The issue is that some titles are too long (like "KNOCKBACK TANKS" and "ROCKET JOCKEY") and the fixed width box wasn’t handling overflow properly. Also, the timers should look like they are inside the box visually, not overflowing or misaligned.
-
-Here’s the fixed version:
-
-Key Fixes:
-Text wrap/fit: Long titles now wrap or scale inside the box.
-
-Box contains timer numbers properly: Timers are vertically and horizontally centered.
-
-Uniform box size for all timers.
-
-Optional padding and background to make timers look “inside the box.”
-
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>Quad Timer Overlay</title>
-
-<style>
-/* ===== LOAD 28 DAYS LATER FONT ===== */
-@font-face {
-  font-family: 'DaysLater';
-  src: url('28%20Days%20Later.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-
-/* ===== FULL BLACK BACKGROUND ===== */
-html, body {
-  margin: 0;
-  padding: 0;
-  background: #000000; /* solid black background */
-  overflow: hidden;
-}
-
-/* ===== FIXED HORIZONTAL LAYOUT ===== */
-.container {
-  position: fixed;   
-  top: 20px;         
-  left: 50%;         
-  transform: translateX(-50%);
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  align-items: flex-start;
-}
-
-/* ===== TIMER BOX WITH RED OUTLINE ===== */
-.timerBox {
-  text-align: center;
-  border: 2px solid red;       
-  background: rgba(0,0,0,0.6); /* semi-transparent black for “inside box” look */
-  padding: 10px 5px;          
-  width: 180px;                
-  height: 130px;               
-  box-sizing: border-box;      
-  display: flex;
-  flex-direction: column;
-  justify-content: center;     
-  align-items: center;         
-  overflow: hidden;           /* prevent text overflow */
-}
-
-/* ===== TITLE STYLE ===== */
-.title {
-  font-family: 'DaysLater', sans-serif;
-  font-size: 20px;
-  color: #ffffff;
-  margin-bottom: 6px;
-  letter-spacing: 1px;
-  text-align: center;
-  word-wrap: break-word;      /* wrap long text */
-  white-space: normal;
-  max-width: 100%;
-  text-shadow: 
-     -1px -1px 0 #ff0000,  
-      1px -1px 0 #ff0000,
-     -1px  1px 0 #ff0000,
-      1px  1px 0 #ff0000; 
-}
-
-/* ===== TIMER NUMBERS STYLE ===== */
-.time {
-  font-family: 'DaysLater', sans-serif;
-  font-size: 50px;
-  color: #ffffff;
-  text-shadow: 
-     -2px -2px 0 #ff0000,  
-      2px -2px 0 #ff0000,
-     -2px  2px 0 #ff0000,
-      2px  2px 0 #ff0000;
-  width: 100%;       
-  display: block;
-  text-align: center;
-  overflow: hidden;
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-  <div class="timerBox">
-    <div class="title">EXPERT MODE</div>
-    <div id="timeA" class="time">00:00:00</div>
-  </div>
-
-  <div class="timerBox">
-    <div class="title">SUPER TANKS</div>
-    <div id="timeB" class="time">00:00:00</div>
-  </div>
-
-  <div class="timerBox">
-    <div class="title">KNOCKBACK TANKS</div>
-    <div id="timeC" class="time">00:00:00</div>
-  </div>
-
-  <div class="timerBox">
-    <div class="title">ROCKET JOCKEY</div>
-    <div id="timeD" class="time">00:00:00</div>
-  </div>
-
-</div>
-
-<script>
-let timers = {
-  A: { end:null, running:false, pausedRemaining:0 },
-  B: { end:null, running:false, pausedRemaining:0 },
-  C: { end:null, running:false, pausedRemaining:0 },
-  D: { end:null, running:false, pausedRemaining:0 }
-};
-
-const saved = localStorage.getItem("timers");
-if(saved){
-  const parsed = JSON.parse(saved);
-  for(const id of ["A","B","C","D"]){
-    if(parsed[id]){
-      timers[id] = parsed[id];
-      if(timers[id].running && timers[id].pausedRemaining){
-        timers[id].end = Date.now() + timers[id].pausedRemaining;
+  window.addEventListener("beforeunload", ()=>{
+    for(const id of ["A","B","C","D"]){
+      const t = timers[id];
+      if(t.running && t.end){
+        t.pausedRemaining = t.end - Date.now();
       }
     }
-  }
-}
-
-function fmt(ms){
-  if(ms<=0) return "00:00:00";
-  let s=Math.floor(ms/1000);
-  let h=Math.floor(s/3600);
-  let m=Math.floor((s%3600)/60);
-  s=s%60;
-  return [h,m,s].map(n=>String(n).padStart(2,'0')).join(":");
-}
-
-function tick(){
-  const now = Date.now();
-  for(const id of ["A","B","C","D"]){
-    const t = timers[id];
-    const el = document.getElementById("time"+id);
-
-    if(t.running && t.end){
-      let rem = t.end - now;
-      if(rem <= 0){
-        rem = 0;
-        t.running = false;
-      }
-      el.textContent = fmt(rem);
-      t.pausedRemaining = rem;
-    } else {
-      el.textContent = fmt(t.pausedRemaining);
-    }
-  }
-  requestAnimationFrame(tick);
-}
-tick();
-
-function toggleTimer(id, seconds=0){
-  const t = timers[id];
-  const now = Date.now();
-
-  if(t.running){
-    t.pausedRemaining = t.end - now;
-    t.running = false;
-  } else {
-    if(seconds > 0){
-      t.end = now + seconds * 1000;
-      t.pausedRemaining = seconds * 1000;
-    } else if(t.pausedRemaining > 0){
-      t.end = now + t.pausedRemaining;
-    } else {
-      t.end = now;
-    }
-    t.running = true;
-  }
-  saveTimers();
-}
-
-function stopTimer(id){
-  const t = timers[id];
-  t.running = false;
-  t.end = null;
-  t.pausedRemaining = 0;
-  document.getElementById("time"+id).textContent = "00:00:00";
-  saveTimers();
-}
-
-function addTime(id, sec){
-  const t = timers[id];
-  if(!t.end) t.end = Date.now();
-  t.end += sec * 1000;
-  t.running = true;
-  saveTimers();
-}
-
-document.addEventListener("keydown",(e)=>{
-  switch(e.code){
-    case "Numpad7": toggleTimer("A"); break;
-    case "Numpad8": stopTimer("A"); break;
-    case "Numpad9": addTime("A", 1800); break;
-
-    case "Numpad4": toggleTimer("B"); break;
-    case "Numpad5": stopTimer("B"); break;
-    case "Numpad6": addTime("B", 1800); break;
-
-    case "Numpad1": toggleTimer("C"); break;
-    case "Numpad2": stopTimer("C"); break;
-    case "Numpad3": addTime("C", 1800); break;
-
-    case "NumpadMultiply": toggleTimer("D"); break;
-    case "NumpadSubtract": stopTimer("D"); break;
-    case "NumpadAdd": addTime("D", 1800); break;
-  }
-});
-
-function saveTimers(){
-  localStorage.setItem("timers", JSON.stringify(timers));
-}
-
-window.addEventListener("beforeunload", ()=>{
-  for(const id of ["A","B","C","D"]){
-    const t = timers[id];
-    if(t.running && t.end){
-      t.pausedRemaining = t.end - Date.now();
-    }
-  }
-  saveTimers();
-});
+    saveTimers();
+  });
 </script>
 
 </body>
