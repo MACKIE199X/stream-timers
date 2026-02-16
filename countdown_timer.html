@@ -44,6 +44,7 @@ html, body {
   color: #ffffff;
   margin-bottom: 4px;
   letter-spacing: 2px;
+  white-space: nowrap; /* <-- force single line */
   text-shadow: 
      -1px -1px 0 #ff0000,  
       1px -1px 0 #ff0000,
@@ -92,12 +93,27 @@ html, body {
 </div>
 
 <script>
+// ===== TIMER STATE =====
 let timers = {
   A: { end:null, running:false, pausedRemaining:0 },
   B: { end:null, running:false, pausedRemaining:0 },
   C: { end:null, running:false, pausedRemaining:0 },
   D: { end:null, running:false, pausedRemaining:0 }
 };
+
+// Load saved timers
+const saved = localStorage.getItem("timers");
+if(saved){
+  const parsed = JSON.parse(saved);
+  for(const id of ["A","B","C","D"]){
+    if(parsed[id]){
+      timers[id] = parsed[id];
+      if(timers[id].running && timers[id].pausedRemaining){
+        timers[id].end = Date.now() + timers[id].pausedRemaining;
+      }
+    }
+  }
+}
 
 function fmt(ms){
   if(ms<=0) return "00:00:00";
@@ -113,7 +129,6 @@ function tick(){
   for(const id of ["A","B","C","D"]){
     const t = timers[id];
     const el = document.getElementById("time"+id);
-
     if(t.running && t.end){
       let rem = t.end - now;
       if(rem <= 0){
@@ -130,6 +145,7 @@ function tick(){
 }
 tick();
 
+// ===== CONTROLS =====
 function toggleTimer(id, seconds=0){
   const t = timers[id];
   const now = Date.now();
@@ -148,6 +164,7 @@ function toggleTimer(id, seconds=0){
     }
     t.running = true;
   }
+  saveTimers();
 }
 
 function stopTimer(id){
@@ -156,6 +173,7 @@ function stopTimer(id){
   t.end = null;
   t.pausedRemaining = 0;
   document.getElementById("time"+id).textContent = "00:00:00";
+  saveTimers();
 }
 
 function addTime(id, sec){
@@ -163,8 +181,10 @@ function addTime(id, sec){
   if(!t.end) t.end = Date.now();
   t.end += sec * 1000;
   t.running = true;
+  saveTimers();
 }
 
+// ===== NUMPAD CONTROLS =====
 document.addEventListener("keydown",(e)=>{
   switch(e.code){
     case "Numpad7": toggleTimer("A"); break;
@@ -183,6 +203,20 @@ document.addEventListener("keydown",(e)=>{
     case "NumpadSubtract": stopTimer("D"); break;
     case "NumpadAdd": addTime("D", 1800); break;
   }
+});
+
+function saveTimers(){
+  localStorage.setItem("timers", JSON.stringify(timers));
+}
+
+window.addEventListener("beforeunload", ()=>{
+  for(const id of ["A","B","C","D"]){
+    const t = timers[id];
+    if(t.running && t.end){
+      t.pausedRemaining = t.end - Date.now();
+    }
+  }
+  saveTimers();
 });
 </script>
 
